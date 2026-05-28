@@ -1,6 +1,6 @@
-import { getStore } from '@netlify/blobs';
+import { getStore, connectLambda } from '@netlify/blobs';
 
-const headers = {
+const baseHeaders = {
   'Content-Type': 'application/json; charset=utf-8',
   'Cache-Control': 'no-store',
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +8,12 @@ const headers = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
 };
 
-const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers });
+const json = (body, statusCode = 200) => ({
+  statusCode,
+  headers: baseHeaders,
+  body: JSON.stringify(body)
+});
+
 const now = () => new Date().toISOString();
 const rand = (len = 4) => Array.from({ length: len }, () => Math.floor(Math.random() * 10)).join('');
 const makeToken = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
@@ -69,20 +74,33 @@ function requirePlayer(room, playerId, playerToken) {
   return null;
 }
 
-export default async function handler(request, context) {
-  if (request.method === 'OPTIONS') return json({ ok: true });
-  if (request.method !== 'POST') return json({ ok: false, error: 'POST 요청만 사용할 수 있습니다.' }, 405);
-
-  // 중요: Netlify Blobs 저장소는 요청 핸들러 안에서 직접 생성해야 합니다.
-  // 함수 밖이나 Lambda 호환 모드에서 생성하면 MissingBlobsEnvironmentError가 날 수 있습니다.
-  const store = getStore({ name: 'number-baseball-rooms', consistency: 'strong' });
-
-  let body = {};
+function parseBody(event) {
+  if (!event.body) return {};
   try {
-    body = await request.json();
+    const text = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body;
+    return JSON.parse(text);
   } catch {
-    return json({ ok: false, error: '요청 형식이 올바르지 않습니다.' }, 400);
+    return null;
   }
+}
+
+export async function handler(event, context) {
+  if (event.httpMethod === 'OPTIONS') return json({ ok: true });
+  if (event.httpMethod !== 'POST') return json({ ok: false, error: 'POST 요청만 사용할 수 있습니다.' }, 405);
+
+  let store;
+  try {
+    // Lambda 호환 함수에서는 이 줄이 있어야 Netlify Blobs가 siteID/token 환경을 읽습니다.
+    // MissingBlobsEnvironmentError가 날 때의 핵심 수정입니다.
+    connectLambda(event);
+    store = getStore('number-baseball-rooms');
+  } catch (error) {
+    console.error('Blobs init error:', error);
+    return json({ ok: false, error: '저장소 연결 오류가 발생했습니다.', detail: error?.message || String(error) }, 500);
+  }
+
+  const body = parseBody(event);
+  if (body === null) return json({ ok: false, error: '요청 형식이 올바르지 않습니다.' }, 400);
 
   const action = body.action;
 
@@ -215,11 +233,7 @@ export default async function handler(request, context) {
 
     return json({ ok: false, error: '알 수 없는 action입니다.' }, 400);
   } catch (error) {
-    console.error(error);
+    console.error('Game error:', error);
     return json({ ok: false, error: '서버 오류가 발생했습니다.', detail: error?.message || String(error) }, 500);
   }
 }
-
-export const config = {
-  path: '/.netlify/functions/game'
-};
