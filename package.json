@@ -1,8 +1,8 @@
 {
   "name": "number-baseball-battle-netlify",
-  "version": "1.0.0",
-  "description": "Two-device number baseball game using Netlify Functions and Netlify Blobs",
-  "type": "commonjs",
+  "version": "1.0.1",
+  "description": "Two-device number baseball game using Netlify Functions v2 and Netlify Blobs",
+  "type": "module",
   "scripts": {
     "dev": "netlify dev",
     "build": "echo 'No build step needed'"

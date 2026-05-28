@@ -11,13 +11,8 @@ const headers = {
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers });
 const now = () => new Date().toISOString();
 const rand = (len = 4) => Array.from({ length: len }, () => Math.floor(Math.random() * 10)).join('');
-const token = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+const makeToken = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 const normalizeCode = (code) => String(code || '').replace(/\D/g, '').slice(0, 4);
-
-function getRoomStore() {
-  // strong consistency is important because this game checks updates every 2 seconds.
-  return getStore({ name: 'number-baseball-rooms', consistency: 'strong' });
-}
 
 function validateNumber(value) {
   const s = String(value || '').trim();
@@ -36,14 +31,14 @@ function score(secret, guess) {
   return { strikes, balls, out: strikes === 0 && balls === 0 };
 }
 
-async function getRoom(code) {
+async function getRoom(store, code) {
   if (!code) return null;
-  return await getRoomStore().get(`room:${code}`, { type: 'json', consistency: 'strong' });
+  return await store.get(`room:${code}`, { type: 'json', consistency: 'strong' });
 }
 
-async function saveRoom(room) {
+async function saveRoom(store, room) {
   room.updatedAt = now();
-  await getRoomStore().setJSON(`room:${room.code}`, room);
+  await store.setJSON(`room:${room.code}`, room);
 }
 
 function publicRoom(room, playerId) {
@@ -74,9 +69,13 @@ function requirePlayer(room, playerId, playerToken) {
   return null;
 }
 
-export default async (request) => {
+export default async function handler(request, context) {
   if (request.method === 'OPTIONS') return json({ ok: true });
   if (request.method !== 'POST') return json({ ok: false, error: 'POST 요청만 사용할 수 있습니다.' }, 405);
+
+  // 중요: Netlify Blobs 저장소는 요청 핸들러 안에서 직접 생성해야 합니다.
+  // 함수 밖이나 Lambda 호환 모드에서 생성하면 MissingBlobsEnvironmentError가 날 수 있습니다.
+  const store = getStore({ name: 'number-baseball-rooms', consistency: 'strong' });
 
   let body = {};
   try {
@@ -93,9 +92,9 @@ export default async (request) => {
       let code = rand(4);
       for (let i = 0; i < 20; i++) {
         code = rand(4);
-        if (!(await getRoom(code))) break;
+        if (!(await getRoom(store, code))) break;
       }
-      const pToken = token();
+      const pToken = makeToken();
       const room = {
         code,
         status: 'waiting',
@@ -107,28 +106,28 @@ export default async (request) => {
         secrets: { p1: null, p2: null },
         logs: [{ type: 'system', text: `${name} 방 생성`, createdAt: now() }]
       };
-      await saveRoom(room);
+      await saveRoom(store, room);
       return json({ ok: true, playerId: 'p1', token: pToken, room: publicRoom(room, 'p1') });
     }
 
     if (action === 'join') {
       const code = normalizeCode(body.code);
       const name = String(body.name || '도전자').trim().slice(0, 12) || '도전자';
-      const room = await getRoom(code);
+      const room = await getRoom(store, code);
       if (!room) return json({ ok: false, error: '방을 찾을 수 없습니다.' }, 404);
       if (room.players.p2) return json({ ok: false, error: '이미 두 명이 들어온 방입니다.' }, 409);
-      const pToken = token();
+      const pToken = makeToken();
       room.players.p2 = { name, token: pToken, joinedAt: now() };
       room.status = 'setting';
       room.logs.push({ type: 'system', text: `${name} 입장`, createdAt: now() });
-      await saveRoom(room);
+      await saveRoom(store, room);
       return json({ ok: true, playerId: 'p2', token: pToken, room: publicRoom(room, 'p2') });
     }
 
     if (action === 'state') {
       const code = normalizeCode(body.code);
       const { playerId, token: playerToken } = body;
-      const room = await getRoom(code);
+      const room = await getRoom(store, code);
       if (!room) return json({ ok: false, error: '방을 찾을 수 없습니다.' }, 404);
       const err = requirePlayer(room, playerId, playerToken);
       if (err) return json({ ok: false, error: err }, 403);
@@ -141,7 +140,7 @@ export default async (request) => {
       const secret = String(body.secret || '').trim();
       const errNum = validateNumber(secret);
       if (errNum) return json({ ok: false, error: errNum }, 400);
-      const room = await getRoom(code);
+      const room = await getRoom(store, code);
       if (!room) return json({ ok: false, error: '방을 찾을 수 없습니다.' }, 404);
       const err = requirePlayer(room, playerId, playerToken);
       if (err) return json({ ok: false, error: err }, 403);
@@ -156,7 +155,7 @@ export default async (request) => {
       } else {
         room.status = room.players.p2 ? 'setting' : 'waiting';
       }
-      await saveRoom(room);
+      await saveRoom(store, room);
       return json({ ok: true, room: publicRoom(room, playerId) });
     }
 
@@ -166,7 +165,7 @@ export default async (request) => {
       const guess = String(body.guess || '').trim();
       const errNum = validateNumber(guess);
       if (errNum) return json({ ok: false, error: errNum }, 400);
-      const room = await getRoom(code);
+      const room = await getRoom(store, code);
       if (!room) return json({ ok: false, error: '방을 찾을 수 없습니다.' }, 404);
       const err = requirePlayer(room, playerId, playerToken);
       if (err) return json({ ok: false, error: err }, 403);
@@ -194,14 +193,14 @@ export default async (request) => {
       } else {
         room.turn = targetId;
       }
-      await saveRoom(room);
+      await saveRoom(store, room);
       return json({ ok: true, result, room: publicRoom(room, playerId) });
     }
 
     if (action === 'reset') {
       const code = normalizeCode(body.code);
       const { playerId, token: playerToken } = body;
-      const room = await getRoom(code);
+      const room = await getRoom(store, code);
       if (!room) return json({ ok: false, error: '방을 찾을 수 없습니다.' }, 404);
       const err = requirePlayer(room, playerId, playerToken);
       if (err) return json({ ok: false, error: err }, 403);
@@ -210,7 +209,7 @@ export default async (request) => {
       room.winner = null;
       room.secrets = { p1: null, p2: null };
       room.logs = [{ type: 'system', text: '새 게임 준비', createdAt: now() }];
-      await saveRoom(room);
+      await saveRoom(store, room);
       return json({ ok: true, room: publicRoom(room, playerId) });
     }
 
@@ -219,7 +218,7 @@ export default async (request) => {
     console.error(error);
     return json({ ok: false, error: '서버 오류가 발생했습니다.', detail: error?.message || String(error) }, 500);
   }
-};
+}
 
 export const config = {
   path: '/.netlify/functions/game'
