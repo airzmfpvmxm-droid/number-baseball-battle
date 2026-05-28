@@ -29,7 +29,7 @@ async function request(payload) {
     body: JSON.stringify(payload)
   });
   const data = await res.json();
-  if (!data.ok) throw new Error(data.error || '요청 실패');
+  if (!data.ok) throw new Error(data.detail ? `${data.error}: ${data.detail}` : (data.error || '요청 실패'));
   return data;
 }
 function showGame() {
@@ -57,7 +57,7 @@ function render(room) {
   $('roomCode').textContent = room.code;
   $('myName').textContent = room.me?.name || '-';
   $('opponentName').textContent = room.opponent?.name || '대기 중';
-  $('mySecretStatus').textContent = room.me?.secretSet ? `등록 완료 (${room.me.secret})` : '비밀 숫자 미등록';
+  $('mySecretStatus').textContent = room.me?.secretSet ? '등록 완료' : '비밀 숫자 미등록';
   $('opponentSecretStatus').textContent = room.opponent ? (room.opponent.secretSet ? '등록 완료' : '비밀 숫자 미등록') : '입장 전';
   $('statusBox').textContent = statusText(room);
 
