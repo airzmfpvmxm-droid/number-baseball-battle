@@ -3,86 +3,132 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>숫자야구 배틀</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>숫자야구 배틀 랭킹전</title>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <main class="app">
-    <section class="hero">
-      <p class="badge">2초 자동 갱신 · 방 코드 배틀</p>
-      <h1>숫자야구 배틀</h1>
-      <p>서로 다른 기기에서 방 코드로 만나 3자리 숫자를 추리해 보세요.</p>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">2초 자동 갱신 · Firebase 랭킹전</p>
+        <h1>⚾ 숫자야구 배틀</h1>
+        <p class="subtitle">이름으로 입장하고, 친구와 겨룬 승패가 랭킹에 누적됩니다.</p>
+      </div>
+      <div class="pill" id="connectionStatus">준비 중</div>
+    </header>
+
+    <section class="grid">
+      <section class="card" id="loginCard">
+        <h2>1. 이름으로 입장</h2>
+        <p class="hint">학급에서 구분하기 쉬운 이름을 입력하세요. 예: 5-4 김민준</p>
+        <div class="row">
+          <input id="playerNameInput" maxlength="20" placeholder="이름 입력" autocomplete="off" />
+          <button id="loginBtn">시작하기</button>
+        </div>
+        <p class="small">이메일 가입 없이 Firebase 익명 로그인으로 접속합니다.</p>
+      </section>
+
+      <section class="card hidden" id="lobbyCard">
+        <div class="spaceBetween">
+          <div>
+            <h2>2. 방 만들기 / 입장</h2>
+            <p class="hint"><strong id="currentName"></strong>님, 방을 만들거나 친구의 방 코드로 입장하세요.</p>
+          </div>
+          <button class="ghost" id="logoutNameBtn">이름 변경</button>
+        </div>
+        <div class="buttonGrid">
+          <button id="createRoomBtn">방 만들기</button>
+          <div class="joinBox">
+            <input id="roomCodeInput" maxlength="4" placeholder="방 코드 4자리" inputmode="numeric" />
+            <button id="joinRoomBtn">입장</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card hidden" id="gameCard">
+        <div class="spaceBetween wrap">
+          <div>
+            <p class="eyebrow">현재 방 코드</p>
+            <h2 id="roomCodeTitle">----</h2>
+          </div>
+          <div class="roomStatus" id="roomStatusText">대기 중</div>
+        </div>
+
+        <div class="playersBox">
+          <div class="playerPanel" id="hostPanel">
+            <p class="label">방장</p>
+            <strong id="hostNameText">-</strong>
+            <span id="hostReadyText">비밀 숫자 미등록</span>
+          </div>
+          <div class="versus">VS</div>
+          <div class="playerPanel" id="guestPanel">
+            <p class="label">참가자</p>
+            <strong id="guestNameText">대기 중</strong>
+            <span id="guestReadyText">비밀 숫자 미등록</span>
+          </div>
+        </div>
+
+        <div id="secretArea" class="playArea">
+          <h3>3. 내 비밀 숫자 등록</h3>
+          <p class="hint">서로 다른 숫자 3개를 입력하세요. 예: 427</p>
+          <div class="row">
+            <input id="secretInput" maxlength="3" placeholder="비밀 숫자" inputmode="numeric" />
+            <button id="saveSecretBtn">등록</button>
+          </div>
+        </div>
+
+        <div id="guessArea" class="playArea hidden">
+          <h3>4. 추측하기</h3>
+          <p class="hint" id="turnHint">차례를 확인하는 중입니다.</p>
+          <div class="row">
+            <input id="guessInput" maxlength="3" placeholder="추측 숫자" inputmode="numeric" />
+            <button id="guessBtn">제출</button>
+          </div>
+        </div>
+
+        <div id="finishedArea" class="finished hidden"></div>
+
+        <div class="historyBox">
+          <h3>기록</h3>
+          <ul id="historyList"></ul>
+        </div>
+
+        <div class="buttonGrid bottomActions">
+          <button class="ghost" id="leaveRoomBtn">대기실로 나가기</button>
+          <button class="danger" id="resetGameBtn">같은 방 새 게임</button>
+        </div>
+      </section>
+
+      <section class="card rankCard">
+        <div class="spaceBetween">
+          <div>
+            <h2>🏆 누적 랭킹</h2>
+            <p class="hint">점수순으로 정렬됩니다. 승리 3점, 패배 0점입니다.</p>
+          </div>
+          <button class="ghost" id="refreshRankBtn">새로고침</button>
+        </div>
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>순위</th>
+                <th>이름</th>
+                <th>승</th>
+                <th>패</th>
+                <th>점수</th>
+                <th>승률</th>
+              </tr>
+            </thead>
+            <tbody id="rankingBody">
+              <tr><td colspan="6">이름으로 입장하면 랭킹을 불러옵니다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
-
-    <section id="startPanel" class="card">
-      <h2>시작하기</h2>
-      <label>내 이름</label>
-      <input id="nameInput" maxlength="12" placeholder="예: 현식" />
-      <div class="buttonRow">
-        <button id="createBtn">방 만들기</button>
-      </div>
-      <div class="joinBox">
-        <label>방 코드로 입장</label>
-        <div class="inline">
-          <input id="codeInput" inputmode="numeric" maxlength="4" placeholder="예: 4832" />
-          <button id="joinBtn" class="secondary">입장</button>
-        </div>
-      </div>
-    </section>
-
-    <section id="gamePanel" class="card hidden">
-      <div class="topBar">
-        <div>
-          <p class="small">방 코드</p>
-          <h2 id="roomCode">----</h2>
-        </div>
-        <button id="copyBtn" class="secondary smallBtn">코드 복사</button>
-      </div>
-
-      <div id="statusBox" class="statusBox">상태 확인 중...</div>
-
-      <div class="grid">
-        <div class="miniCard">
-          <p class="small">나</p>
-          <strong id="myName">-</strong>
-          <p id="mySecretStatus">비밀 숫자 미등록</p>
-        </div>
-        <div class="miniCard">
-          <p class="small">상대</p>
-          <strong id="opponentName">대기 중</strong>
-          <p id="opponentSecretStatus">입장 전</p>
-        </div>
-      </div>
-
-      <div id="secretPanel" class="actionBox">
-        <h3>내 비밀 숫자 정하기</h3>
-        <p>서로 다른 숫자 3개를 입력하세요. 예: 427</p>
-        <div class="inline">
-          <input id="secretInput" inputmode="numeric" maxlength="3" placeholder="123" />
-          <button id="secretBtn">등록</button>
-        </div>
-      </div>
-
-      <div id="guessPanel" class="actionBox hidden">
-        <h3>상대 숫자 맞히기</h3>
-        <p id="turnNotice">차례를 확인하는 중...</p>
-        <div class="inline">
-          <input id="guessInput" inputmode="numeric" maxlength="3" placeholder="789" />
-          <button id="guessBtn">추측하기</button>
-        </div>
-      </div>
-
-      <div class="buttonRow">
-        <button id="resetBtn" class="danger">새 게임</button>
-        <button id="leaveBtn" class="secondary">처음 화면</button>
-      </div>
-
-      <h3>기록</h3>
-      <ul id="logList" class="logList"></ul>
-    </section>
-
-    <p id="message" class="message"></p>
   </main>
-  <script src="app.js"></script>
+
+  <div id="toast" class="toast hidden"></div>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

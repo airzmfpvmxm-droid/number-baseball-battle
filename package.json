@@ -1,16 +1,9 @@
 {
-  "name": "number-baseball-battle-netlify",
-  "version": "1.0.2",
-  "description": "Two-device number baseball game using Netlify Functions and Netlify Blobs with connectLambda",
-  "type": "module",
+  "name": "number-baseball-firebase-ranking",
+  "version": "1.0.0",
+  "description": "Firebase Auth + Firestore 기반 숫자야구 배틀 랭킹전",
   "scripts": {
-    "dev": "netlify dev",
-    "build": "echo 'No build step needed'"
+    "build": "echo 'static site ready'"
   },
-  "dependencies": {
-    "@netlify/blobs": "^9.1.2"
-  },
-  "devDependencies": {
-    "netlify-cli": "latest"
-  }
+  "license": "MIT"
 }
