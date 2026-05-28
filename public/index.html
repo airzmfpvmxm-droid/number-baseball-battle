@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>숫자야구 배틀</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <p class="badge">2초 자동 갱신 · 방 코드 배틀</p>
+      <h1>숫자야구 배틀</h1>
+      <p>서로 다른 기기에서 방 코드로 만나 3자리 숫자를 추리해 보세요.</p>
+    </section>
+
+    <section id="startPanel" class="card">
+      <h2>시작하기</h2>
+      <label>내 이름</label>
+      <input id="nameInput" maxlength="12" placeholder="예: 현식" />
+      <div class="buttonRow">
+        <button id="createBtn">방 만들기</button>
+      </div>
+      <div class="joinBox">
+        <label>방 코드로 입장</label>
+        <div class="inline">
+          <input id="codeInput" inputmode="numeric" maxlength="4" placeholder="예: 4832" />
+          <button id="joinBtn" class="secondary">입장</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="gamePanel" class="card hidden">
+      <div class="topBar">
+        <div>
+          <p class="small">방 코드</p>
+          <h2 id="roomCode">----</h2>
+        </div>
+        <button id="copyBtn" class="secondary smallBtn">코드 복사</button>
+      </div>
+
+      <div id="statusBox" class="statusBox">상태 확인 중...</div>
+
+      <div class="grid">
+        <div class="miniCard">
+          <p class="small">나</p>
+          <strong id="myName">-</strong>
+          <p id="mySecretStatus">비밀 숫자 미등록</p>
+        </div>
+        <div class="miniCard">
+          <p class="small">상대</p>
+          <strong id="opponentName">대기 중</strong>
+          <p id="opponentSecretStatus">입장 전</p>
+        </div>
+      </div>
+
+      <div id="secretPanel" class="actionBox">
+        <h3>내 비밀 숫자 정하기</h3>
+        <p>서로 다른 숫자 3개를 입력하세요. 예: 427</p>
+        <div class="inline">
+          <input id="secretInput" inputmode="numeric" maxlength="3" placeholder="123" />
+          <button id="secretBtn">등록</button>
+        </div>
+      </div>
+
+      <div id="guessPanel" class="actionBox hidden">
+        <h3>상대 숫자 맞히기</h3>
+        <p id="turnNotice">차례를 확인하는 중...</p>
+        <div class="inline">
+          <input id="guessInput" inputmode="numeric" maxlength="3" placeholder="789" />
+          <button id="guessBtn">추측하기</button>
+        </div>
+      </div>
+
+      <div class="buttonRow">
+        <button id="resetBtn" class="danger">새 게임</button>
+        <button id="leaveBtn" class="secondary">처음 화면</button>
+      </div>
+
+      <h3>기록</h3>
+      <ul id="logList" class="logList"></ul>
+    </section>
+
+    <p id="message" class="message"></p>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
