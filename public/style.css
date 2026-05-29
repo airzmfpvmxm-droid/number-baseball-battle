@@ -413,3 +413,57 @@ th { color: var(--muted); font-size: .82rem; }
   .numberGrid { gap: 6px; }
   .numberChip { min-height: 38px; border-radius: 12px; }
 }
+
+
+/* 후보 숫자판 표시 보강 */
+.numberGrid,
+#numberGrid {
+  display: grid !important;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.numberGrid .numberChip,
+#numberGrid .numberChip,
+#numberGrid span {
+  display: grid !important;
+  place-items: center;
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px solid #d7e3ff;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 900;
+  font-size: 1.05rem;
+  user-select: none;
+}
+
+.numberGrid .numberChip.eliminated,
+#numberGrid .numberChip.eliminated,
+#numberGrid span.eliminated {
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  text-decoration: line-through;
+  opacity: .45;
+  position: relative;
+}
+
+.numberGrid .numberChip.eliminated::after,
+#numberGrid .numberChip.eliminated::after,
+#numberGrid span.eliminated::after {
+  content: "제외";
+  position: absolute;
+  bottom: 3px;
+  font-size: .55rem;
+  text-decoration: none;
+  color: #64748b;
+}
+
+@media (max-width: 680px) {
+  .numberGrid,
+  #numberGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
