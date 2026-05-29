@@ -53,6 +53,8 @@ const els = {
   turnHint: $('turnHint'),
   guessInput: $('guessInput'),
   guessBtn: $('guessBtn'),
+  numberBoard: $('numberBoard'),
+  numberGrid: $('numberGrid'),
   finishedArea: $('finishedArea'),
   historyList: $('historyList'),
   leaveRoomBtn: $('leaveRoomBtn'),
@@ -423,6 +425,40 @@ async function resetSameRoom() {
   }
 }
 
+
+function getMyHistory(history) {
+  if (!currentUser) return [];
+  return (history || []).filter((h) => h.byUid === currentUser.uid);
+}
+
+function getEliminatedDigits(history) {
+  const eliminated = new Set();
+  getMyHistory(history).forEach((h) => {
+    if (h.out || (Number(h.strikes) === 0 && Number(h.balls) === 0)) {
+      String(h.guess || '').split('').forEach((digit) => eliminated.add(digit));
+    }
+  });
+  return eliminated;
+}
+
+function renderNumberBoard(history) {
+  if (!els.numberGrid) return;
+  const eliminated = getEliminatedDigits(history);
+  els.numberGrid.innerHTML = '';
+  '0123456789'.split('').forEach((digit) => {
+    const item = document.createElement('span');
+    item.className = 'numberChip';
+    item.textContent = digit;
+    if (eliminated.has(digit)) {
+      item.classList.add('eliminated');
+      item.title = '아웃 결과로 제외된 숫자입니다.';
+    } else {
+      item.title = '아직 가능성이 남아 있는 숫자입니다.';
+    }
+    els.numberGrid.appendChild(item);
+  });
+}
+
 async function refreshRoom() {
   if (!currentRoomCode) return;
   try {
@@ -486,21 +522,29 @@ function renderRoom(room) {
     els.finishedArea.textContent = `${winText} 랭킹에 결과가 반영됩니다.`;
   }
 
+  const showEndActions = room.status === 'finished';
+  els.leaveRoomBtn.classList.toggle('hidden', !showEndActions);
+  els.resetGameBtn.classList.toggle('hidden', !showEndActions);
   els.resetGameBtn.disabled = role !== 'host';
+
+  const showBoard = role && (room.status === 'playing' || room.status === 'finished');
+  els.numberBoard.classList.toggle('hidden', !showBoard);
+  renderNumberBoard(room.history || []);
   renderHistory(room.history || []);
 }
 
 function renderHistory(history) {
   els.historyList.innerHTML = '';
-  if (!history.length) {
+  const myHistory = getMyHistory(history);
+  if (!myHistory.length) {
     const li = document.createElement('li');
-    li.textContent = '아직 추측 기록이 없습니다.';
+    li.textContent = '아직 내가 추측한 기록이 없습니다.';
     els.historyList.appendChild(li);
     return;
   }
-  [...history].reverse().forEach((h, idx) => {
+  [...myHistory].reverse().forEach((h, idx) => {
     const li = document.createElement('li');
-    li.textContent = `${history.length - idx}. ${h.byName} → ${h.guess} : ${h.label}`;
+    li.textContent = `${myHistory.length - idx}. ${h.guess} : ${h.label}`;
     els.historyList.appendChild(li);
   });
 }
