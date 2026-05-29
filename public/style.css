@@ -467,3 +467,65 @@ th { color: var(--muted); font-size: .82rem; }
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
+
+/* 무승부 요청 영역 */
+.drawArea {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px dashed #f59e0b;
+  background: #fffbeb;
+  border-radius: 18px;
+}
+
+.drawArea .drawBtn {
+  border-color: #f59e0b;
+  color: #92400e;
+  background: #fff7ed;
+}
+
+.drawArea .drawBtn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* 무승부 승인 팝업 */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, .55);
+}
+
+.modalCard {
+  width: min(420px, 100%);
+  padding: 24px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, .25);
+  border: 1px solid #e5e7eb;
+}
+
+.modalCard h2 {
+  margin-top: 0;
+}
+
+.modalCard p {
+  color: #334155;
+  line-height: 1.6;
+}
+
+.modalActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+@media (max-width: 480px) {
+  .modalActions {
+    grid-template-columns: 1fr;
+  }
+}
