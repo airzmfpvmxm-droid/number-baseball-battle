@@ -55,6 +55,12 @@ const els = {
   guessBtn: $('guessBtn'),
   numberBoard: $('numberBoard'),
   numberGrid: $('numberGrid'),
+  drawArea: $('drawArea'),
+  requestDrawBtn: $('requestDrawBtn'),
+  drawStatusText: $('drawStatusText'),
+  drawModal: $('drawModal'),
+  acceptDrawBtn: $('acceptDrawBtn'),
+  denyDrawBtn: $('denyDrawBtn'),
   finishedArea: $('finishedArea'),
   historyList: $('historyList'),
   leaveRoomBtn: $('leaveRoomBtn'),
@@ -70,6 +76,7 @@ let currentRoomCode = localStorage.getItem('nb_roomCode') || '';
 let pollTimer = null;
 let rankTimer = null;
 let lastRoom = null;
+let shownDrawRequestKey = '';
 
 function showToast(message) {
   els.toast.textContent = message;
@@ -204,6 +211,8 @@ async function createRoom() {
       winnerUid: null,
       loserUid: null,
       rankingApplied: false,
+      drawRequest: null,
+      drawAcceptedAt: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -226,7 +235,7 @@ async function joinRoom() {
       const snap = await tx.get(ref);
       if (!snap.exists()) throw new Error('없는 방 코드입니다.');
       const room = snap.data();
-      if (room.status === 'finished') throw new Error('이미 끝난 방입니다.');
+      if (room.status === 'finished' || room.status === 'draw') throw new Error('이미 끝난 방입니다.');
       if (room.hostUid === currentUser.uid || room.guestUid === currentUser.uid) return;
       if (room.guestUid) throw new Error('이미 참가자가 있는 방입니다.');
       tx.update(ref, {
@@ -415,6 +424,8 @@ async function resetSameRoom() {
       loserUid: null,
       loserName: null,
       rankingApplied: false,
+      drawRequest: null,
+      drawAcceptedAt: null,
       finishedAt: null,
       updatedAt: serverTimestamp()
     });
@@ -422,6 +433,113 @@ async function resetSameRoom() {
     refreshRoom();
   } catch (error) {
     showToast(`새 게임 오류: ${error.message}`);
+  }
+}
+
+async function requestDraw() {
+  if (!currentRoomCode || !lastRoom) return;
+  const role = getRole(lastRoom);
+  if (!role) return showToast('이 방의 참가자가 아닙니다.');
+  if (lastRoom.status !== 'playing') return showToast('게임 진행 중에만 무승부를 요청할 수 있습니다.');
+  if (lastRoom.drawRequest && lastRoom.drawRequest.status === 'pending') {
+    return showToast('이미 무승부 요청이 진행 중입니다.');
+  }
+  const ok = confirm('상대에게 무승부를 요청할까요? 상대가 승인하면 랭킹에 반영하지 않고 경기가 끝납니다.');
+  if (!ok) return;
+
+  const ref = doc(db, 'numberBaseballRooms', currentRoomCode);
+  try {
+    await updateDoc(ref, {
+      drawRequest: {
+        status: 'pending',
+        byUid: currentUser.uid,
+        byName: player.name,
+        byRole: role,
+        at: Date.now()
+      },
+      updatedAt: serverTimestamp()
+    });
+    showToast('무승부를 요청했습니다. 상대의 승인을 기다립니다.');
+    await refreshRoom();
+  } catch (error) {
+    showToast(`무승부 요청 오류: ${error.message}`);
+  }
+}
+
+async function acceptDraw() {
+  if (!currentRoomCode || !lastRoom) return;
+  const req = lastRoom.drawRequest;
+  if (!req || req.status !== 'pending') return;
+  const ref = doc(db, 'numberBaseballRooms', currentRoomCode);
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) throw new Error('방을 찾을 수 없습니다.');
+      const room = snap.data();
+      const freshReq = room.drawRequest;
+      if (!freshReq || freshReq.status !== 'pending') return;
+      if (freshReq.byUid === currentUser.uid) throw new Error('내가 보낸 요청은 내가 승인할 수 없습니다.');
+      tx.update(ref, {
+        status: 'draw',
+        turn: null,
+        winnerUid: null,
+        winnerName: null,
+        loserUid: null,
+        loserName: null,
+        rankingApplied: true,
+        drawRequest: { ...freshReq, status: 'accepted', acceptedByUid: currentUser.uid, acceptedByName: player.name, acceptedAt: Date.now() },
+        drawAcceptedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    });
+    hideDrawModal();
+    showToast('무승부로 경기가 종료되었습니다. 랭킹에는 반영되지 않습니다.');
+    await refreshRoom();
+  } catch (error) {
+    showToast(`무승부 승인 오류: ${error.message}`);
+  }
+}
+
+async function denyDraw() {
+  if (!currentRoomCode || !lastRoom) return;
+  const req = lastRoom.drawRequest;
+  if (!req || req.status !== 'pending') return hideDrawModal();
+  const ref = doc(db, 'numberBaseballRooms', currentRoomCode);
+  try {
+    await updateDoc(ref, {
+      drawRequest: { ...req, status: 'denied', deniedByUid: currentUser.uid, deniedByName: player.name, deniedAt: Date.now() },
+      updatedAt: serverTimestamp()
+    });
+    hideDrawModal();
+    showToast('무승부 요청을 거절했습니다.');
+    await refreshRoom();
+  } catch (error) {
+    showToast(`무승부 거절 오류: ${error.message}`);
+  }
+}
+
+function showDrawModal() {
+  if (els.drawModal) els.drawModal.classList.remove('hidden');
+}
+
+function hideDrawModal() {
+  if (els.drawModal) els.drawModal.classList.add('hidden');
+}
+
+function handleDrawRequestPrompt(room) {
+  const req = room.drawRequest;
+  if (!req || req.status !== 'pending' || !currentUser) {
+    hideDrawModal();
+    return;
+  }
+  if (req.byUid === currentUser.uid) {
+    hideDrawModal();
+    return;
+  }
+  const key = `${room.roomCode}-${req.byUid}-${req.at || ''}`;
+  if (shownDrawRequestKey !== key) {
+    shownDrawRequestKey = key;
+    showDrawModal();
   }
 }
 
@@ -506,14 +624,15 @@ function renderRoom(room) {
     waiting: '상대 입장 대기 중',
     ready: '비밀 숫자 등록 중',
     playing: room.turn === role ? '내 차례' : '상대 차례',
-    finished: '게임 종료'
+    finished: '게임 종료',
+    draw: '무승부 종료'
   };
   els.roomStatusText.textContent = statusMap[room.status] || room.status;
 
   els.hostPanel.classList.toggle('myTurn', room.status === 'playing' && room.turn === 'host');
   els.guestPanel.classList.toggle('myTurn', room.status === 'playing' && room.turn === 'guest');
 
-  const canSetSecret = role && room.status !== 'finished' && !mySecret && !!room.guestUid;
+  const canSetSecret = role && room.status !== 'finished' && room.status !== 'draw' && !mySecret && !!room.guestUid;
   els.secretArea.classList.toggle('hidden', !canSetSecret);
 
   const canGuess = role && room.status === 'playing' && room.turn === role;
@@ -524,18 +643,32 @@ function renderRoom(room) {
     ? '내 차례입니다. 상대의 비밀 숫자를 추측하세요.'
     : `상대(${room[`${other}Name`] || '친구'})의 차례입니다. 2초마다 자동 갱신됩니다.`;
 
-  els.finishedArea.classList.toggle('hidden', room.status !== 'finished');
+  const isEnded = room.status === 'finished' || room.status === 'draw';
+  els.finishedArea.classList.toggle('hidden', !isEnded);
   if (room.status === 'finished') {
     const winText = room.winnerUid === currentUser?.uid ? '승리했습니다! 🎉' : `${room.winnerName}님이 승리했습니다.`;
     els.finishedArea.textContent = `${winText} 랭킹에 결과가 반영됩니다.`;
+  } else if (room.status === 'draw') {
+    els.finishedArea.textContent = '무승부로 경기가 종료되었습니다. 승패와 랭킹에는 반영되지 않습니다.';
   }
 
-  const showEndActions = room.status === 'finished';
+  const drawPending = room.drawRequest && room.drawRequest.status === 'pending';
+  const requestedByMe = drawPending && room.drawRequest.byUid === currentUser?.uid;
+  const showDrawArea = role && room.status === 'playing';
+  els.drawArea.classList.toggle('hidden', !showDrawArea);
+  els.requestDrawBtn.disabled = !!drawPending;
+  els.drawStatusText.textContent = drawPending
+    ? (requestedByMe ? '무승부 요청을 보냈습니다. 상대의 승인을 기다리는 중입니다.' : `${room.drawRequest.byName || '상대'}님이 무승부를 요청했습니다. 팝업에서 승인 또는 거절하세요.`)
+    : '상대가 승인하면 랭킹에 반영하지 않고 경기를 종료합니다.';
+
+  handleDrawRequestPrompt(room);
+
+  const showEndActions = isEnded;
   els.leaveRoomBtn.classList.toggle('hidden', !showEndActions);
   els.resetGameBtn.classList.toggle('hidden', !showEndActions);
   els.resetGameBtn.disabled = role !== 'host';
 
-  const showBoard = role && (room.status === 'playing' || room.status === 'finished');
+  const showBoard = role && (room.status === 'playing' || room.status === 'finished' || room.status === 'draw');
   els.numberBoard.classList.toggle('hidden', !showBoard);
   renderNumberBoard(room.history || []);
   renderHistory(room.history || []);
@@ -629,6 +762,9 @@ els.secretInput.addEventListener('input', (e) => { e.target.value = cleanDigits(
 els.guessInput.addEventListener('input', (e) => { e.target.value = cleanDigits(e.target.value).slice(0, 3); });
 els.saveSecretBtn.addEventListener('click', saveSecret);
 els.guessBtn.addEventListener('click', submitGuess);
+els.requestDrawBtn.addEventListener('click', requestDraw);
+els.acceptDrawBtn.addEventListener('click', acceptDraw);
+els.denyDrawBtn.addEventListener('click', denyDraw);
 els.leaveRoomBtn.addEventListener('click', leaveRoom);
 els.resetGameBtn.addEventListener('click', resetSameRoom);
 els.refreshRankBtn.addEventListener('click', loadRanking);
