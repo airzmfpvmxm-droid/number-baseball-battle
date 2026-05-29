@@ -1,9 +1,0 @@
-{
-  "name": "number-baseball-firebase-ranking",
-  "version": "1.0.0",
-  "description": "Firebase Auth + Firestore 기반 숫자야구 배틀 랭킹전",
-  "scripts": {
-    "build": "echo 'static site ready'"
-  },
-  "license": "MIT"
-}
