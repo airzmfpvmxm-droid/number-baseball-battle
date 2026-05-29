@@ -529,3 +529,133 @@ th { color: var(--muted); font-size: .82rem; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* 차례와 행동을 더 분명하게 보여주는 UI */
+.actionBanner {
+  display: grid;
+  gap: 6px;
+  margin: 16px 0;
+  padding: 18px 18px;
+  border-radius: 22px;
+  border: 2px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+}
+.actionBanner strong {
+  display: block;
+  font-size: clamp(1.2rem, 3vw, 1.65rem);
+  line-height: 1.2;
+  font-weight: 950;
+}
+.actionBanner span {
+  color: #475569;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.actionBanner.my-turn {
+  border-color: #2563eb;
+  background: linear-gradient(135deg, #dbeafe, #eff6ff);
+  animation: turnPulse 1.25s ease-in-out infinite alternate;
+}
+.actionBanner.my-turn strong { color: #1d4ed8; }
+.actionBanner.need-secret {
+  border-color: #d97706;
+  background: linear-gradient(135deg, #ffedd5, #fff7ed);
+  animation: secretPulse 1.25s ease-in-out infinite alternate;
+}
+.actionBanner.need-secret strong { color: #b45309; }
+.actionBanner.opponent-turn {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  opacity: .92;
+}
+.actionBanner.finished {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+.actionBanner.finished strong { color: #166534; }
+
+@keyframes turnPulse {
+  from { box-shadow: 0 0 0 0 rgba(37, 99, 235, .12), 0 10px 24px rgba(15, 23, 42, .08); }
+  to { box-shadow: 0 0 0 8px rgba(37, 99, 235, .16), 0 14px 30px rgba(37, 99, 235, .16); }
+}
+@keyframes secretPulse {
+  from { box-shadow: 0 0 0 0 rgba(217, 119, 6, .12), 0 10px 24px rgba(15, 23, 42, .08); }
+  to { box-shadow: 0 0 0 8px rgba(217, 119, 6, .16), 0 14px 30px rgba(217, 119, 6, .16); }
+}
+
+.playArea.activeAction {
+  border: 3px solid #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 6px rgba(37, 99, 235, .10);
+}
+#secretArea.activeAction {
+  border-color: #d97706;
+  background: #fff7ed;
+  box-shadow: 0 0 0 6px rgba(217, 119, 6, .12);
+}
+.playArea.activeAction h3::before {
+  content: "👉 ";
+}
+.playArea.activeAction button {
+  transform: scale(1.03);
+  min-height: 54px;
+  font-size: 1.05rem;
+}
+.playArea.disabledAction {
+  filter: grayscale(.25);
+  opacity: .72;
+}
+.playArea.disabledAction input,
+.playArea.disabledAction button {
+  cursor: not-allowed;
+}
+
+.playerPanel.mePanel {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+.playerPanel.mePanel .label::after {
+  content: " · 나";
+  color: #d97706;
+  font-weight: 900;
+}
+.playerPanel.myTurn {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 0 0 5px rgba(37,99,235,.14);
+}
+.playerPanel.myTurn::before {
+  content: "현재 차례";
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 900;
+}
+.roomStatus {
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+@media (max-width: 680px) {
+  .actionBanner {
+    padding: 16px;
+    border-radius: 18px;
+    position: sticky;
+    top: 8px;
+    z-index: 5;
+  }
+  .actionBanner strong {
+    font-size: 1.35rem;
+  }
+  .playArea.activeAction button {
+    width: 100%;
+    transform: none;
+  }
+}
