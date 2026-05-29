@@ -97,6 +97,11 @@
           <div class="numberGrid" id="numberGrid"></div>
         </div>
 
+        <div id="drawArea" class="drawArea hidden">
+          <button class="ghost drawBtn" id="requestDrawBtn">무승부 요청</button>
+          <p class="small" id="drawStatusText">상대가 승인하면 랭킹에 반영하지 않고 경기를 종료합니다.</p>
+        </div>
+
         <div id="finishedArea" class="finished hidden"></div>
 
         <div class="historyBox">
@@ -138,6 +143,17 @@
       </section>
     </section>
   </main>
+
+  <div id="drawModal" class="modalOverlay hidden" role="dialog" aria-modal="true" aria-labelledby="drawModalTitle">
+    <div class="modalCard">
+      <h2 id="drawModalTitle">무승부 요청</h2>
+      <p>상대방이 무승부를 요청하였습니다. 허락하시겠습니까?</p>
+      <div class="modalActions">
+        <button class="ghost" id="denyDrawBtn">거절</button>
+        <button id="acceptDrawBtn">승인</button>
+      </div>
+    </div>
+  </div>
 
   <div id="toast" class="toast hidden"></div>
   <script type="module" src="./app.js"></script>
