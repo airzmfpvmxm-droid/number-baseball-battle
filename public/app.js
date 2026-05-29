@@ -40,6 +40,7 @@ const els = {
   joinRoomBtn: $('joinRoomBtn'),
   roomCodeTitle: $('roomCodeTitle'),
   roomStatusText: $('roomStatusText'),
+  actionBanner: $('actionBanner'),
   hostNameText: $('hostNameText'),
   guestNameText: $('guestNameText'),
   hostReadyText: $('hostReadyText'),
@@ -609,6 +610,19 @@ async function refreshRoom() {
   }
 }
 
+
+function setActionBanner(type, title, message) {
+  if (!els.actionBanner) return;
+  els.actionBanner.className = `actionBanner ${type || 'waiting'}`;
+  els.actionBanner.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span>`;
+}
+
+function setActiveArea(area, active) {
+  if (!area) return;
+  area.classList.toggle('activeAction', !!active);
+  area.classList.toggle('quietAction', !active);
+}
+
 function renderRoom(room) {
   const role = getRole(room);
   const mySecret = role ? room[`${role}Secret`] : null;
@@ -631,17 +645,40 @@ function renderRoom(room) {
 
   els.hostPanel.classList.toggle('myTurn', room.status === 'playing' && room.turn === 'host');
   els.guestPanel.classList.toggle('myTurn', room.status === 'playing' && room.turn === 'guest');
+  els.hostPanel.classList.toggle('mePanel', role === 'host');
+  els.guestPanel.classList.toggle('mePanel', role === 'guest');
 
   const canSetSecret = role && room.status !== 'finished' && room.status !== 'draw' && !mySecret && !!room.guestUid;
   els.secretArea.classList.toggle('hidden', !canSetSecret);
+  setActiveArea(els.secretArea, canSetSecret);
 
   const canGuess = role && room.status === 'playing' && room.turn === role;
   els.guessArea.classList.toggle('hidden', room.status !== 'playing');
+  els.guessArea.classList.toggle('disabledAction', room.status === 'playing' && !canGuess);
+  setActiveArea(els.guessArea, canGuess);
   els.guessBtn.disabled = !canGuess;
   els.guessInput.disabled = !canGuess;
   els.turnHint.textContent = canGuess
     ? '내 차례입니다. 상대의 비밀 숫자를 추측하세요.'
     : `상대(${room[`${other}Name`] || '친구'})의 차례입니다. 2초마다 자동 갱신됩니다.`;
+
+  if (!role) {
+    setActionBanner('waiting', '방에 참여하는 중입니다', '방 코드와 참가자 상태를 확인하고 있습니다.');
+  } else if (room.status === 'waiting') {
+    setActionBanner('waiting', '친구를 기다리는 중', '상대가 방 코드로 입장하면 비밀 숫자 등록이 시작됩니다.');
+  } else if (canSetSecret) {
+    setActionBanner('need-secret', '지금 할 일: 내 비밀 숫자 등록', '상대가 맞혀야 할 서로 다른 숫자 3개를 입력하고 등록을 누르세요.');
+  } else if (room.status === 'ready' && mySecret) {
+    setActionBanner('waiting', '상대의 비밀 숫자 등록을 기다리는 중', '상대가 등록하면 자동으로 게임이 시작됩니다.');
+  } else if (canGuess) {
+    setActionBanner('my-turn', '🔥 내 차례입니다!', '상대의 비밀 숫자를 추측해서 제출하세요.');
+  } else if (room.status === 'playing') {
+    setActionBanner('opponent-turn', '⏳ 상대 차례입니다', '잠시 기다리세요. 2초마다 자동으로 갱신됩니다.');
+  } else if (room.status === 'finished') {
+    setActionBanner('finished', '게임이 종료되었습니다', '승패와 점수가 랭킹에 반영됩니다.');
+  } else if (room.status === 'draw') {
+    setActionBanner('finished', '무승부로 종료되었습니다', '이 경기는 승패와 랭킹에 반영되지 않습니다.');
+  }
 
   const isEnded = room.status === 'finished' || room.status === 'draw';
   els.finishedArea.classList.toggle('hidden', !isEnded);
