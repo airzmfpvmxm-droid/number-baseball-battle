@@ -215,6 +215,72 @@ button.danger { background: var(--danger); }
   margin: 14px 0;
 }
 
+
+.numberBoard {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 20px;
+  padding: 16px;
+  margin: 14px 0;
+}
+
+.boardHeader {
+  margin-bottom: 10px;
+}
+
+.boardHeader .hint {
+  margin-bottom: 0;
+}
+
+.boardLegend {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: var(--accent);
+  border: 1px solid #fed7aa;
+  font-weight: 900;
+  font-size: .82rem;
+}
+
+.numberGrid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.numberChip {
+  display: grid;
+  place-items: center;
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px solid #d7e3ff;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 900;
+  font-size: 1.05rem;
+  user-select: none;
+}
+
+.numberChip.eliminated {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  text-decoration: line-through;
+  opacity: .58;
+  position: relative;
+}
+
+.numberChip.eliminated::after {
+  content: "제외";
+  position: absolute;
+  bottom: 3px;
+  font-size: .55rem;
+  text-decoration: none;
+  color: #64748b;
+}
+
 .finished {
   border-radius: 20px;
   padding: 16px;
@@ -322,6 +388,7 @@ th { color: var(--muted); font-size: .82rem; }
   }
 
   .playersBox { gap: 8px; }
+  .numberGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .versus { padding: 2px 0; }
   .playerPanel { min-height: auto; }
 
@@ -343,4 +410,6 @@ th { color: var(--muted); font-size: .82rem; }
   .card { padding: 14px; }
   button { padding-left: 12px; padding-right: 12px; }
   table { min-width: 440px; }
+  .numberGrid { gap: 6px; }
+  .numberChip { min-height: 38px; border-radius: 12px; }
 }
