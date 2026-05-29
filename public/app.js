@@ -434,8 +434,16 @@ function getMyHistory(history) {
 function getEliminatedDigits(history) {
   const eliminated = new Set();
   getMyHistory(history).forEach((h) => {
-    if (h.out || (Number(h.strikes) === 0 && Number(h.balls) === 0)) {
-      String(h.guess || '').split('').forEach((digit) => eliminated.add(digit));
+    const strikes = Number(h.strikes ?? 0);
+    const balls = Number(h.balls ?? 0);
+    const label = String(h.label || '');
+    const isOut = h.out === true || label.includes('아웃') || (strikes === 0 && balls === 0);
+
+    if (isOut) {
+      String(h.guess || '')
+        .replace(/\D/g, '')
+        .split('')
+        .forEach((digit) => eliminated.add(digit));
     }
   });
   return eliminated;
